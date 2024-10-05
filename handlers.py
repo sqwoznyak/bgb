@@ -13,13 +13,17 @@ import payment
 import config
 import kb
 import utils
+from db import Database
 
 router = Router()
-
+db = Database('users.db')
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
-	#БД часть
+        if not db.user_exists(message.from_user.id):
+            db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
+            db.set_admin_priv(message.from_user.username)
+        status = db.get_user_status(message.from_user.id)
         match status:
             case "start":
                 keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
@@ -68,6 +72,14 @@ async def call_buy_one_month_subscription(call: types.CallbackQuery):
 async def process_callback(callback_query: types.CallbackQuery):
     pass
 
+@router.message(F.text.lower() == "usermode")
+async def usermode(message: types.Message):
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb.user_kb,
+        resize_keyboard=True,
+        input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
+    )
+    await message.answer(kb.TEXT_USER_MAIN, reply_markup=keyboard)
+    
 @router.callback_query(F.data == "back")
 async def call_main_menu(call: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.buy_kb)
@@ -90,7 +102,23 @@ async def buySubscription(message: types.Message):
     )
     await message.answer(TEXT_SUBSCRIPTION_ACTIVE)
 
-    
+@router.message(F.text.startswith("Отправить"))
+async def sendall(message: types.Message):
+    if message.chat.type == 'private':
+        if message.from_user.id == 353666482:
+            text = message.text[9:]
+            users = db.get_users()
+            
+            for row in users:
+                try:
+                    await message.bot.send_message(row[0], text)
+                    if int(row[1]) != 1:
+                        db.set_active(row[0], 1)  # Mark user as active if sent
+                except:
+                    db.set_active(row[0], 0)  # Mark user as inactive if fails
+            
+            await message.bot.send_message(message.from_user.id, "Успешная рассылка")  # Send confirmation to admin
+
 @router.message(F.text.lower() == "")
 async def buySubscription(message: types.Message):
     await message.answer(kb.TEXT_TEST_MESS)
