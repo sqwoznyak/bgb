@@ -64,3 +64,42 @@ async def run_payment(item):
 #print(result.id)
 #print(result.status)
 
+
+
+def create_pay_button(url, id):
+
+    data = "buying" + "," + str(id)
+
+    print(data)
+
+    buy_button = [
+        [
+            types.InlineKeyboardButton(text="Оплатить", callback_data = data, url = url )
+        ],
+
+        [
+            types.InlineKeyboardButton(text="Подтвердить оплату", callback_data=data)  # Кнопка для callback
+        ],
+        [
+            types.InlineKeyboardButton(text="Назад", callback_data = "back")
+        ],
+    ]
+
+
+    return types.InlineKeyboardMarkup(inline_keyboard=buy_button)
+ 
+
+
+async def check_payment(payment_id):
+    payment = Payment.find_one(payment_id)
+    while payment.status == 'pending':
+        payment = Payment.find_one(payment_id)
+        await asyncio.sleep(3)
+
+    if payment.status == 'succeeded':
+        print("SUCCSESS RETURN")
+        return True
+    else:
+        print("BAD RETURN")
+        return False
+
