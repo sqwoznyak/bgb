@@ -70,7 +70,64 @@ async def call_buy_one_month_subscription(call: types.CallbackQuery):
 
 @router.callback_query(lambda F: F.data and F.data.startswith('buying'))
 async def process_callback(callback_query: types.CallbackQuery):
-    pass
+    data = callback_query.data.split(",")
+    action = data[0]
+    payment_id = data[1]
+
+    # Ищим платеж
+    payment = Payment.find_one(payment_id)
+    
+    # Сообщаем, что проверяем статус оплаты
+    await callback_query.message.bot.send_message(
+        chat_id=callback_query.message.chat.id,
+        text=f"Проверка статуса оплаты. Пожалуйста, подождите..."
+    )
+
+    while payment.status == 'pending':
+        # Подождем перед следующей проверкой
+        await asyncio.sleep(3)
+        
+        # Обновляем статус платежа
+        payment = Payment.find_one(payment_id)
+
+        # Сообщаем тикущий статус (например, раз в несколько циклов, чтобы избежать спама)
+        await callback_query.message.bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text=f"Статус оплаты: {payment.status}"
+        )
+
+    # После выхода из цикла отправляем финальное сообщение в зависимости от статуса
+    if payment.status == 'succeeded':
+        # Добавление в БД и тп и тд
+        db.add_sub(callback_query.message.chat.id, payment.id, payment.description, "000", "000" )
+        db.set_admin_priv(callback_query.message.chat.username)
+        payment_details = (
+            f"✅ **Платежная информация**\n"
+            f"🔹 **ID транзакции:** {payment.id}\n"
+            f"🔹 **Сумма:** {payment.amount['value']} {payment.amount['currency']}\n"
+            f"🔹 **Срок подписки:** {payment.description}\n"
+            f"🔹 **Дата создания:** {payment.created_at}\n"
+            "\nДля доступа ко всем функциям нажмите кнопку **\"Главное меню\"**."
+        )
+
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb.main_kb,
+            resize_keyboard=True,
+            input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
+        )
+
+        text = kb.TEXT_SUCCESS_PAY + payment_details
+        await callback_query.message.bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode='Markdown'
+        )
+    else:
+        await callback_query.message.bot.send_message(
+            chat_id=callback_query.message.chat.id,
+            text=kb.TEXT_FAIL_PAY,
+            parse_mode='Markdown'
+        )
 
 @router.message(F.text.lower() == "usermode")
 async def usermode(message: types.Message):
