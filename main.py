@@ -3,6 +3,8 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties 
 from aiogram.fsm.storage.memory import MemoryStorage
 from handlers import router
+from db import Database 
+import config
 import asyncio
 import logging
 
