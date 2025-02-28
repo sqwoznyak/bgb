@@ -145,6 +145,39 @@ class Database:
                 (server_id,)
             ).fetchone()
             return result[0] if result else None
+ # NEW methods 28.02.2025
+ # Обновление статуса сервера
+    def update_server_status(self, server_id, new_status):
+        with self.connection:
+            self.cursor.execute(
+                "UPDATE `Servers-tabels` SET `server-status` = ? WHERE `server_id` = ?",
+                (new_status, server_id)
+            )
+
+    # Удаление пользователя
+    def delete_user(self, tg_id):
+        with self.connection:
+            self.cursor.execute("DELETE FROM `Client-table` WHERE `tg_id` = ?", (tg_id,))
+
+    # Получение всех активных ключей
+    def get_active_keys(self):
+        with self.connection:
+            return self.cursor.execute(
+                "SELECT `tg_id`, `key-name`, `key` FROM `key-table` WHERE `active` = 1"
+            ).fetchall()
+
+    # Обновление роли пользователя
+    def update_user_role(self, tg_id, new_role):
+        with self.connection:
+            self.cursor.execute(
+                "UPDATE `Client-table` SET `role` = ? WHERE `tg_id` = ?",
+                (new_role, tg_id)
+            )
+
+    # Получение списка всех серверов
+    def get_all_servers(self):
+        with self.connection:
+            return self.cursor.execute("SELECT * FROM `Servers-tabels`").fetchall()
 
 
 
