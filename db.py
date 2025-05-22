@@ -178,8 +178,73 @@ class Database:
     def get_all_servers(self):
         with self.connection:
             return self.cursor.execute("SELECT * FROM `Servers-tabels`").fetchall()
+ # NEW methods 22.05.2025. Добавление старых методов
+ # Получение всех пользователей с их ролями
+    def get_users(self):
+        with self.connection:
+            return self.cursor.execute(
+                "SELECT `tg_id`, `role` FROM `Client-table`"
+            ).fetchall()
 
+    # Получение даты окончания подписки активного ключа
+    def get_user_end_sub(self, tg_id):
+        with self.connection:
+            result = self.cursor.execute(
+                "SELECT `end-date` FROM `key-table` WHERE `tg_id` = ? AND `active` = 1",
+                (tg_id,)
+            ).fetchone()
+            return result[0] if result else None
 
+    # Подсчёт пользователей с активными ключами
+    def get_count_users(self):
+        with self.connection:
+            result = self.cursor.execute(
+                "SELECT COUNT(*) FROM `key-table` WHERE `key` IS NOT NULL AND `active` = 1"
+            ).fetchone()
+            return result[0]
+
+    # Добавление подписки с учётом продления
+    def add_sub(self, tg_id, key_name, key, duration_days):
+        with self.connection:
+            now = int(datetime.now().timestamp())
+            self.cursor.execute(
+                "SELECT MAX(`end-date`) FROM `key-table` WHERE `tg_id` = ? AND `end-date` > ?",
+                (tg_id, now)
+            )
+            result = self.cursor.fetchone()
+            if result and result[0]:
+                start_date = result[0] + 86400  # на следующий день
+            else:
+                start_date = now
+
+            end_date = start_date + duration_days * 86400
+
+            self.cursor.execute('''
+                INSERT INTO `key-table` (tg_id, `key-name`, `start-date`, `end-date`, `key`, `active`)
+                VALUES (?, ?, ?, ?, ?, 1)
+            ''', (tg_id, key_name, start_date, end_date, key))
+
+    # Деактивация всех просроченных ключей
+    def remove_expired_keys(self):
+        now = int(datetime.now().timestamp())
+        with self.connection:
+            self.cursor.execute(
+                "UPDATE `key-table` SET `active` = 0 WHERE `end-date` < ? AND `active` = 1",
+                (now,)
+            )
+
+    # Назначение администратора по нику
+    def set_admin_priv(self, username):
+        allowed_nicknames = ["sqrt38", "hythe7"]
+        if username in allowed_nicknames:
+            with self.connection:
+                self.cursor.execute(
+                    "UPDATE `Client-table` SET `role` = 'admin' WHERE `username` = ?",
+                    (username,)
+                )
+                print(f"Role 'admin' successfully set for {username}")
+        else:
+            print(f"Access denied: {username} is not allowed to be an admin.")
 
     
 
