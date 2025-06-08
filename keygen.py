@@ -1,16 +1,6 @@
-from outline_vpn.outline_vpn import OutlineVPN
+import random
+import string
 
-class OutlineBackend:
-    pass
-################################################
-# Дополить бэканд к этому
-# В начале деф вариант
-# Потом начать продумаывать динамические ключи
-#################################################
-# Дока к API
-# https://github.com/jadolg/outline-vpn-api
-# https://www.getoutline.com/developers#description/introduction
-################################################
-# Источник дин ключей
-#https://artydev.ru/posts/dynamic-outline/
-#################################################
+def generate_key(length=16):
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))

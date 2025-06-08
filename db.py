@@ -89,9 +89,20 @@ class Database:
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
+    
+    # Проверка уникальности выданного ключа
+    def key_exists(self, key_value):
+        with self.connection:
+            result = self.cursor.execute(
+                "SELECT COUNT(*) FROM 'key-table' WHERE key = ?", (key_value,)
+            ).fetchone()[0]
+            return result > 0
 
     # Key-table methods
     def add_key(self, tg_id, key_name, key, duration_days):
+        while self.key_exists(key):
+            from utils import generate_key
+            key = generate_key()
         start_date = int(datetime.now().timestamp())
         end_date = int((datetime.now() + timedelta(days=duration_days)).timestamp())
         with self.connection:
@@ -164,7 +175,7 @@ class Database:
         with self.connection:
             return self.cursor.execute(
                 "SELECT `tg_id`, `key-name`, `key` FROM `key-table` WHERE `active` = 1"
-            ).fetchall()
+            ).fetchall()    
 
     # Обновление роли пользователя
     def update_user_role(self, tg_id, new_role):

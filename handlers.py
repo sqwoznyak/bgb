@@ -22,6 +22,8 @@ db = Database('users.db')
 async def cmd_start(message: types.Message):
     if not db.user_exists(message.from_user.id):
         db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
+        unique_key = utils.generate_key()
+        db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)  
         db.set_admin_priv(message.from_user.username) 
     
     status = db.get_user_role(message.from_user.id)
