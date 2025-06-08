@@ -59,7 +59,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS `transaction-table` (
             `tg_id` INTEGER NOT NULL,
             `description` TEXT NOT NULL,
-            `json-config` TEXT NOT NULL UNIQUE,
+            `json_config` TEXT NOT NULL UNIQUE,
             FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
         )
         ''')
@@ -119,14 +119,14 @@ class Database:
     def add_transaction(self, tg_id, description, json_config):
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `transaction-table` (tg_id, description, json-config)
+            INSERT INTO `transaction-table` (tg_id, description, json_config)
             VALUES (?, ?, ?)
             ''', (tg_id, description, json_config))
 
     def get_transactions(self, tg_id):
         with self.connection:
             return self.cursor.execute(
-                "SELECT `description`, `json-config` FROM `transaction-table` WHERE `tg_id` = ?",
+                "SELECT `description`, `json_config` FROM `transaction-table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchall()
 
