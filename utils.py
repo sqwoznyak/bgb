@@ -18,3 +18,6 @@ def get_key(user_name):
             result = 'Твоя подписка не активна:('
     return result
 
+def generate_key(length=16):
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
