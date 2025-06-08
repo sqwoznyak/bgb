@@ -44,15 +44,15 @@ class Database:
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `key-table` (
+        CREATE TABLE `key-table` (
             `tg_id` INTEGER NOT NULL,
             `key-name` TEXT NOT NULL,
             `start-date` INTEGER NOT NULL,
             `end-date` INTEGER NOT NULL,
-            `key` INTEGER PRIMARY KEY NOT NULL UNIQUE,
+            `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
             `active` INTEGER,
             FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        )
+        );
         ''')
 
         self.cursor.execute('''
