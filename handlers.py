@@ -93,7 +93,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     # Сообщаем пользователю, что проверяем статус оплаты
     await callback_query.message.bot.send_message(
         chat_id=callback_query.message.chat.id, 
-        text=f"Проверка статуса оплаты. Пожалуйста, подождите..."
+        text=f"Проверка статуса оплаты. Пожалуйста, подождите...."
     )
 
     while payment.status == 'pending':
