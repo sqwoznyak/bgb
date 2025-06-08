@@ -20,30 +20,30 @@ db = Database('users.db')
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
-        if not db.user_exists(message.from_user.id):
-            db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
-            db.set_admin_priv(message.from_user.username)
-        status = db.get_user_status(message.from_user.id)
-        match status:
-            case "start":
-                keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
-                    resize_keyboard=True,
-                    input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
-                )
-                await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
-            case "user":
-                keyboard = types.ReplyKeyboardMarkup(keyboard=kb.user_kb,
-                    resize_keyboard=True,
-                    input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
-                )
-                await message.answer(kb.TEXT_USER_MAIN, reply_markup=keyboard)
-            case "admin":
-                keyboard = types.ReplyKeyboardMarkup(keyboard=kb.admin_kb,
-                    resize_keyboard=True,
-                    input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
-                )
-                await message.answer(kb.START_MESSAGE, reply_markup=keyboard)                 
-
+    if not db.user_exists(message.from_user.id):
+        db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
+        db.set_admin_priv(message.from_user.username) 
+    
+    status = db.get_user_role(message.from_user.id)
+    match status:
+        case "start":
+            keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
+                resize_keyboard=True,
+                input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
+            )
+            await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
+        case "user":
+            keyboard = types.ReplyKeyboardMarkup(keyboard=kb.user_kb,
+                resize_keyboard=True,
+                input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
+            )
+            await message.answer(kb.TEXT_USER_MAIN, reply_markup=keyboard)
+        case "admin":
+            keyboard = types.ReplyKeyboardMarkup(keyboard=kb.admin_kb,
+                resize_keyboard=True,
+                input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
+            )
+            await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
 
 @router.message(F.text.lower() == "главное меню")
 async def handle_main_menu(message: types.Message):
@@ -158,7 +158,7 @@ async def call_main_menu(call: types.CallbackQuery):
 
 @router.message(F.text.lower() == "ключ")
 async def buySubscription(message: types.Message):
-    TEXT_GET_KEY =  db.get_user_key(message.from_user.id)
+    TEXT_GET_KEY = db.get_user_key(message.from_user.id)
     await message.answer(TEXT_GET_KEY)
 
 @router.message(F.text.lower() == "статус")
@@ -193,13 +193,11 @@ async def sendall(message: types.Message):
             for row in users:
                 try:
                     await message.bot.send_message(row[0], text)
-                    if int(row[1]) != 1:
-                        db.set_active(row[0], 1)  # Mark user as active if message was successfully sent
+                    # db.set_active(row[0], 1)  # Убираем, такого метода нет
                 except:
-                    db.set_active(row[0], 0)  # Mark user as inactive if message sending fails
+                    pass  # db.set_active(row[0], 0)  # Убираем, такого метода нет
             
             await message.bot.send_message(message.from_user.id, "Успешная рассылка")  # Send confirmation to admin
-
 
 
 '''
@@ -254,9 +252,10 @@ async def buySubscription(message: types.Message):
 
 @router.callback_query(F.data == "test_period")
 async def call_test_period(call: types.CallbackQuery):
-    db.get_key_my_test(call.message.from_user.id)
-    await call.message.answer(kb.TEXT_TRIAL_PERIOD_STARTED) 
-    await call.message.answer(f"Твой ключ:\n {db.get_key_my_test(call.message.from_user.id)}") 
+    db.get_user_key(call.message.from_user.id)
+    await call.message.answer(kb.TEXT_TRIAL_PERIOD_STARTED)
+    await call.message.answer(f"Твой ключ:\n {db.get_user_key(call.message.from_user.id)}")
+
 
 @router.message(F.text.lower() == "")
 async def buySubscription(message: types.Message):
