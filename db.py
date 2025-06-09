@@ -28,7 +28,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS `Client-table` (
             `tg_id` INTEGER PRIMARY KEY NOT NULL,
             `username` TEXT NOT NULL,
-            `role` TEXT NOT NULL,
+            `role` TEXT NOT NULL CHECK(active IN ('user', 'admin')),
             `referal_id` INTEGER,
             `created_time` INTEGER NOT NULL
         )
@@ -38,7 +38,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS `Servers-tabels` (
             `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
             `cluster` TEXT NOT NULL,
-            `server-status` INTEGER,
+            `server-status` INTEGER NOT NULL CHECK(active IN (0, 1)),
             `server-ip` TEXT NOT NULL
         )
         ''')
@@ -50,7 +50,7 @@ class Database:
             `start-date` INTEGER NOT NULL,
             `end-date` INTEGER NOT NULL,
             `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
-            `active` INTEGER,
+            `active` INTEGER NOT NULL CHECK(active IN (0, 1)),
             FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
         );
         ''')
