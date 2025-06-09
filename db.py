@@ -28,7 +28,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS `Client-table` (
             `tg_id` INTEGER PRIMARY KEY NOT NULL,
             `username` TEXT NOT NULL,
-            `role` TEXT NOT NULL CHECK(active IN ('user', 'admin')),
+            `role` TEXT NOT NULL CHECK(role IN ('user', 'admin')),
             `referal_id` INTEGER,
             `created_time` INTEGER NOT NULL
         )
@@ -38,7 +38,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS `Servers-tabels` (
             `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
             `cluster` TEXT NOT NULL,
-            `server-status` INTEGER NOT NULL CHECK(active IN (0, 1)),
+            `server-status` INTEGER NOT NULL CHECK(server-status IN (0, 1)),
             `server-ip` TEXT NOT NULL
         )
         ''')
