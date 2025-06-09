@@ -1,8 +1,9 @@
+from dotenv import load_dotenv
+import os
 
-youkassa_account_id = "441199"
-youkassa_secret_key = "test_GEFaQ-GumW5Aljc7HKdHqnzhXndH24E-oIiyzVURUzM"
+load_dotenv()
 
-BOT_TOKEN="7315183503:AAESN4rmuZGtIRderw260AMpcjhrSYgZc5Y"
+youkassa_account_id = os.getenv("YOUKASSA_ACCOUNT_ID")
+youkassa_secret_key = os.getenv("YOUKASSA_SECRET_KEY")
 
-
-KK=""
+BOT_TOKEN = os.getenv("BOT_TOKEN")

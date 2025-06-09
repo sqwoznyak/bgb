@@ -24,4 +24,5 @@ jobs:
           script: |
             cd /home/bgb
             git pull
+            pip install -r requirements.txt
             systemctl restart mybot
