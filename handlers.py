@@ -114,7 +114,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     # После выхода из цикла отправляем финальное сообщение в зависимости от статуса
     if payment.status == 'succeeded':
         # Добавление в БД и тп и тд
-        db.add_sub(callback_query.message.chat.id, payment.id, payment.description, "000", "000" )
+        db.add_sub(callback_query.message.chat.id, payment.id, payment.description, utils.generate_key(), "000" )
         db.set_admin_priv(callback_query.message.chat.username)
         payment_details = (
             f"✅ **Платежная информация**\n"
