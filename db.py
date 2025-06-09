@@ -44,22 +44,22 @@ class Database:
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `key-table` (
+        CREATE TABLE `key-table` (
             `tg_id` INTEGER NOT NULL,
             `key-name` TEXT NOT NULL,
             `start-date` INTEGER NOT NULL,
             `end-date` INTEGER NOT NULL,
-            `key` INTEGER PRIMARY KEY NOT NULL UNIQUE,
+            `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
             `active` INTEGER,
             FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        )
+        );
         ''')
 
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS `transaction-table` (
             `tg_id` INTEGER NOT NULL,
             `description` TEXT NOT NULL,
-            `json-config` TEXT NOT NULL UNIQUE,
+            `json_config` TEXT NOT NULL UNIQUE,
             FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
         )
         ''')
@@ -89,9 +89,20 @@ class Database:
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
+    
+    # Проверка уникальности выданного ключа
+    def key_exists(self, key_value):
+        with self.connection:
+            result = self.cursor.execute(
+                "SELECT COUNT(*) FROM 'key-table' WHERE key = ?", (key_value,)
+            ).fetchone()[0]
+            return result > 0
 
     # Key-table methods
     def add_key(self, tg_id, key_name, key, duration_days):
+        while self.key_exists(key):
+            from utils import generate_key
+            key = generate_key()
         start_date = int(datetime.now().timestamp())
         end_date = int((datetime.now() + timedelta(days=duration_days)).timestamp())
         with self.connection:
@@ -119,14 +130,14 @@ class Database:
     def add_transaction(self, tg_id, description, json_config):
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `transaction-table` (tg_id, description, json-config)
+            INSERT INTO `transaction-table` (tg_id, description, json_config)
             VALUES (?, ?, ?)
             ''', (tg_id, description, json_config))
 
     def get_transactions(self, tg_id):
         with self.connection:
             return self.cursor.execute(
-                "SELECT `description`, `json-config` FROM `transaction-table` WHERE `tg_id` = ?",
+                "SELECT `description`, `json_config` FROM `transaction-table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchall()
 
@@ -164,7 +175,7 @@ class Database:
         with self.connection:
             return self.cursor.execute(
                 "SELECT `tg_id`, `key-name`, `key` FROM `key-table` WHERE `active` = 1"
-            ).fetchall()
+            ).fetchall()    
 
     # Обновление роли пользователя
     def update_user_role(self, tg_id, new_role):
