@@ -28,34 +28,33 @@ class Database:
         ''')
 
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS Client_table (
-                tg_id INTEGER PRIMARY KEY,
-                username TEXT,
-                role TEXT DEFAULT 'start',
-                referal_id INTEGER,
-                created_time INTEGER
-            )
-        ''')
-    
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS `key_table` (
-                `tg_id` INTEGER NOT NULL,
-                `key_name` TEXT NOT NULL,
-                `start_date` INTEGER NOT NULL,
-                `end_date` INTEGER NOT NULL,
-                `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
-                `active` INTEGER NOT NULL CHECK(active IN (0, 1)),
-                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
-            );
+        CREATE TABLE IF NOT EXISTS `Servers-tabels` (
+            `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
+            `cluster` TEXT NOT NULL,
+            `server-status` INTEGER NOT NULL CHECK(server-status IN ('0', '1')),
+            `server-ip` TEXT NOT NULL
+        )
         ''')
 
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS `Transaction_table` (
-                `tg_id` INTEGER NOT NULL,
-                `description` TEXT NOT NULL,
-                `json_config` TEXT NOT NULL UNIQUE,
-                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
-            )
+        CREATE TABLE `key-table` (
+            `tg_id` INTEGER NOT NULL,
+            `key-name` TEXT NOT NULL,
+            `start-date` INTEGER NOT NULL,
+            `end-date` INTEGER NOT NULL,
+            `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
+            `active` INTEGER NOT NULL CHECK(active IN ('0', '1')),
+            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
+        );
+        ''')
+
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS `transaction-table` (
+            `tg_id` INTEGER NOT NULL,
+            `description` TEXT NOT NULL,
+            `json_config` TEXT NOT NULL UNIQUE,
+            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
+        )
         ''')
         self.connection.commit()
 
