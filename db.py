@@ -24,60 +24,62 @@ class Database:
         self.connection.close()
 
     def create_tables(self):
+        
+        # создаём таблицы
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `Client-table` (
-            `tg_id` INTEGER PRIMARY KEY NOT NULL,
-            `username` TEXT NOT NULL,
-            `role` TEXT NOT NULL CHECK(role IN ('user', 'admin')),
-            `referal_id` INTEGER,
-            `created_time` INTEGER NOT NULL
-        )
+            CREATE TABLE IF NOT EXISTS `Servers-tabels` (
+                `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
+                `cluster` TEXT NOT NULL,
+                `server_status` INTEGER NOT NULL DEFAULT 1 CHECK(server_status IN (0, 1)),
+                `server_ip` TEXT NOT NULL
+            )
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `Servers-tabels` (
-            `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
-            `cluster` TEXT NOT NULL,
-            `server-status` INTEGER NOT NULL CHECK(server-status IN ('0', '1')),
-            `server-ip` TEXT NOT NULL
-        )
+            CREATE TABLE IF NOT EXISTS Client_table (
+                tg_id INTEGER PRIMARY KEY,
+                username TEXT,
+                role TEXT NOT NULL DEFAULT 'start' CHECK(role IN ('user', 'start', 'admin')),
+                referal_id INTEGER,
+                `active` INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0, 1)),
+                created_time INTEGER
+            )
+        ''')
+    
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS `key_table` (
+                `tg_id` INTEGER NOT NULL,
+                `key_name` TEXT NOT NULL,
+                `start_date` INTEGER NOT NULL,
+                `end_date` INTEGER NOT NULL,
+                `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
+                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
+            );
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE `key-table` (
-            `tg_id` INTEGER NOT NULL,
-            `key-name` TEXT NOT NULL,
-            `start-date` INTEGER NOT NULL,
-            `end-date` INTEGER NOT NULL,
-            `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
-            `active` INTEGER NOT NULL CHECK(active IN ('0', '1')),
-            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        );
-        ''')
-
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `transaction-table` (
-            `tg_id` INTEGER NOT NULL,
-            `description` TEXT NOT NULL,
-            `json_config` TEXT NOT NULL UNIQUE,
-            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        )
+            CREATE TABLE IF NOT EXISTS `Transaction_table` (
+                `tg_id` INTEGER NOT NULL,
+                `description` TEXT NOT NULL,
+                `json_config` TEXT NOT NULL UNIQUE,
+                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
+            )
         ''')
         self.connection.commit()
 
-    # Client-table methods
+    # Client_table methods
     def add_user(self, tg_id, username, role="start", referal_id=0):
         created_time = int(datetime.now().timestamp())
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `Client-table` (tg_id, username, role, referal_id, created_time)
+            INSERT INTO `Client_table` (tg_id, username, role, referal_id, created_time)
             VALUES (?, ?, ?, ?, ?)
             ''', (tg_id, username, role, referal_id, created_time))
 
     def user_exists(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT * FROM `Client-table` WHERE `tg_id` = ?",
+                "SELECT * FROM `Client_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchone()
             return result is not None
@@ -85,20 +87,28 @@ class Database:
     def get_user_role(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT `role` FROM `Client-table` WHERE `tg_id` = ?",
+                "SELECT `role` FROM `Client_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
-    
+        
+    # Обновляем роль у пользователя в Client_table по tg_id
+    def set_user_role(self, tg_id, role):
+        self.cursor.execute(
+            "UPDATE Client_table SET role = ? WHERE tg_id = ?",
+            (role, tg_id)
+        )
+        self.connection.commit()
+
     # Проверка уникальности выданного ключа
     def key_exists(self, key_value):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT COUNT(*) FROM 'key-table' WHERE key = ?", (key_value,)
+                "SELECT COUNT(*) FROM 'key_table' WHERE key = ?", (key_value,)
             ).fetchone()[0]
             return result > 0
 
-    # Key-table methods
+    # key_table methods
     def add_key(self, tg_id, key_name, key, duration_days):
         while self.key_exists(key):
             from utils import generate_key
@@ -107,52 +117,45 @@ class Database:
         end_date = int((datetime.now() + timedelta(days=duration_days)).timestamp())
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `key-table` (tg_id, `key-name`, `start-date`, `end-date`, `key`, `active`)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ''', (tg_id, key_name, start_date, end_date, key, 1))
+            INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (tg_id, key_name, start_date, end_date, key))
 
     def get_user_key(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT `key` FROM `key-table` WHERE `tg_id` = ? AND `active` = 1",
+                "SELECT `key` FROM `key_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
 
-    def deactivate_key(self, tg_id):
-        with self.connection:
-            self.cursor.execute(
-                "UPDATE `key-table` SET `active` = 0 WHERE `tg_id` = ?",
-                (tg_id,)
-            )
-
-    # Transaction-table methods
+    # Transaction_table methods
     def add_transaction(self, tg_id, description, json_config):
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `transaction-table` (tg_id, description, json_config)
+            INSERT INTO `Transaction_table` (tg_id, description, json_config)
             VALUES (?, ?, ?)
             ''', (tg_id, description, json_config))
 
     def get_transactions(self, tg_id):
         with self.connection:
             return self.cursor.execute(
-                "SELECT `description`, `json_config` FROM `transaction-table` WHERE `tg_id` = ?",
+                "SELECT `description`, `json_config` FROM `Transaction_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchall()
 
-    # Servers-table methods
+    # Servers_table methods
     def add_server(self, server_id, cluster, server_status, server_ip):
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `Servers-tabels` (server_id, cluster, `server-status`, `server-ip`)
+            INSERT INTO `Servers-tabels` (server_id, cluster, `server_status`, `server_ip`)
             VALUES (?, ?, ?, ?)
             ''', (server_id, cluster, server_status, server_ip))
 
     def get_server_status(self, server_id):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT `server-status` FROM `Servers-tabels` WHERE `server_id` = ?",
+                "SELECT `server_status` FROM `Servers-tabels` WHERE `server_id` = ?",
                 (server_id,)
             ).fetchone()
             return result[0] if result else None
@@ -161,27 +164,20 @@ class Database:
     def update_server_status(self, server_id, new_status):
         with self.connection:
             self.cursor.execute(
-                "UPDATE `Servers-tabels` SET `server-status` = ? WHERE `server_id` = ?",
+                "UPDATE `Servers-tabels` SET `server_status` = ? WHERE `server_id` = ?",
                 (new_status, server_id)
             )
 
     # Удаление пользователя
     def delete_user(self, tg_id):
         with self.connection:
-            self.cursor.execute("DELETE FROM `Client-table` WHERE `tg_id` = ?", (tg_id,))
-
-    # Получение всех активных ключей
-    def get_active_keys(self):
-        with self.connection:
-            return self.cursor.execute(
-                "SELECT `tg_id`, `key-name`, `key` FROM `key-table` WHERE `active` = 1"
-            ).fetchall()    
+            self.cursor.execute("DELETE FROM `Client_table` WHERE `tg_id` = ?", (tg_id,))
 
     # Обновление роли пользователя
     def update_user_role(self, tg_id, new_role):
         with self.connection:
             self.cursor.execute(
-                "UPDATE `Client-table` SET `role` = ? WHERE `tg_id` = ?",
+                "UPDATE `Client_table` SET `role` = ? WHERE `tg_id` = ?",
                 (new_role, tg_id)
             )
 
@@ -194,23 +190,23 @@ class Database:
     def get_users(self):
         with self.connection:
             return self.cursor.execute(
-                "SELECT `tg_id`, `role` FROM `Client-table`"
+                "SELECT `tg_id`, `active` FROM `Client_table`"
             ).fetchall()
 
     # Получение даты окончания подписки активного ключа
     def get_user_end_sub(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT `end-date` FROM `key-table` WHERE `tg_id` = ? AND `active` = 1",
+                "SELECT `end_date` FROM `key_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
 
-    # Подсчёт пользователей с активными ключами
+    # Подсчёт пользователей
     def get_count_users(self):
         with self.connection:
             result = self.cursor.execute(
-                "SELECT COUNT(*) FROM `key-table` WHERE `key` IS NOT NULL AND `active` = 1"
+                "SELECT COUNT(DISTINCT tg_id) FROM key_table WHERE key IS NOT NULL AND key != ''"
             ).fetchone()
             return result[0]
 
@@ -219,7 +215,7 @@ class Database:
         with self.connection:
             now = int(datetime.now().timestamp())
             self.cursor.execute(
-                "SELECT MAX(`end-date`) FROM `key-table` WHERE `tg_id` = ? AND `end-date` > ?",
+                "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
                 (tg_id, now)
             )
             result = self.cursor.fetchone()
@@ -231,18 +227,9 @@ class Database:
             end_date = start_date + duration_days * 86400
 
             self.cursor.execute('''
-                INSERT INTO `key-table` (tg_id, `key-name`, `start-date`, `end-date`, `key`, `active`)
-                VALUES (?, ?, ?, ?, ?, 1)
+                INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
+                VALUES (?, ?, ?, ?, ?)
             ''', (tg_id, key_name, start_date, end_date, key))
-
-    # Деактивация всех просроченных ключей
-    def remove_expired_keys(self):
-        now = int(datetime.now().timestamp())
-        with self.connection:
-            self.cursor.execute(
-                "UPDATE `key-table` SET `active` = 0 WHERE `end-date` < ? AND `active` = 1",
-                (now,)
-            )
 
     # Назначение администратора по нику
     def set_admin_priv(self, username):
@@ -250,12 +237,20 @@ class Database:
         if username in allowed_nicknames:
             with self.connection:
                 self.cursor.execute(
-                    "UPDATE `Client-table` SET `role` = 'admin' WHERE `username` = ?",
+                    "UPDATE `Client_table` SET `role` = 'admin' WHERE `username` = ?",
                     (username,)
                 )
                 print(f"Role 'admin' successfully set for {username}")
         else:
             print(f"Access denied: {username} is not allowed to be an admin.")
+
+
+    def set_active(self, tg_id, active):
+        with self.connection:
+            return self.cursor.execute(
+                "UPDATE `Client_table` SET `active` = ? WHERE `tg_id` = ?",
+                (active, tg_id)
+            )
 
     
 
