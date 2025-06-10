@@ -113,7 +113,15 @@ class Database:
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
-    
+        
+    # Обновляем роль у пользователя в Client_table по tg_id
+    def set_user_role(self, tg_id, role):
+        self.cursor.execute(
+            "UPDATE Client_table SET role = ? WHERE tg_id = ?",
+            (role, tg_id)
+        )
+        self.connection.commit()
+
     # Проверка уникальности выданного ключа
     def key_exists(self, key_value):
         with self.connection:

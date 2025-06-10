@@ -21,13 +21,23 @@ db = Database('users.db')
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
     print("DEBUG: received /start from", message.from_user.id)
+
+    # Если пользователь не существует, добавляем его с ролью start
     if not db.user_exists(message.from_user.id):
         db.add_user(message.from_user.id, message.from_user.username, referal_id=None)
         unique_key = utils.generate_key()
-        db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)  
-        db.set_admin_priv(message.from_user.username) 
-    
+        db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)
+        db.set_user_role(message.from_user.id, "start")  # назначаем роль start новым пользователям
+
+    # Получаем роль пользователя
     status = db.get_user_role(message.from_user.id)
+
+    # Если роль не установлена или невалидна → принудительно присвоим start
+    if status not in ["start", "user", "admin"]:
+        db.set_user_role(message.from_user.id, "start")
+        status = "start"
+
+    # Показываем соответствующее меню
     match status:
         case "start":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
@@ -35,18 +45,21 @@ async def cmd_start(message: types.Message):
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
+
         case "user":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.user_kb,
                 resize_keyboard=True,
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.TEXT_USER_MAIN, reply_markup=keyboard)
+
         case "admin":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.admin_kb,
                 resize_keyboard=True,
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
+
 
 @router.message(F.text.lower() == "главное меню")
 async def handle_main_menu(message: types.Message):
