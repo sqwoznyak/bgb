@@ -24,30 +24,7 @@ class Database:
         self.connection.close()
 
     def create_tables(self):
-        # создаём таблицу без server — базовая версия
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                tg_id INTEGER PRIMARY KEY,
-                username TEXT,
-                key TEXT,
-                key_name TEXT,
-                duration_days INTEGER,
-                activation_date TEXT
-            )
-        ''')
-        self.connection.commit()
 
-        # проверим, есть ли колонка server
-        self.cursor.execute("PRAGMA table_info(users)")
-        columns = [col[1] for col in self.cursor.fetchall()]
-        print("[DEBUG] Existing columns in users:", columns)
-
-        if "server" not in columns:
-            print("[DEBUG] Adding column server to users table...")
-            self.cursor.execute("ALTER TABLE users ADD COLUMN server TEXT")
-            self.connection.commit()
-
-        # создаём все остальные таблицы
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS `Servers-tabels` (
                 `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,

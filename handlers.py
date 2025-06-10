@@ -10,6 +10,7 @@ from payment import run_payment, item_1m, item_1y, item_3m
 from yookassa import Configuration,Payment
 import asyncio
 import payment
+import sqlite3
 import config
 import kb
 import utils
@@ -25,8 +26,16 @@ async def cmd_start(message: types.Message):
     # Если пользователь не существует, добавляем его с ролью start
     if not db.user_exists(message.from_user.id):
         db.add_user(message.from_user.id, message.from_user.username, referal_id=None)
-        unique_key = utils.generate_key()
-        db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)
+        
+        # Генерация уникального ключа
+        while True:
+            unique_key = utils.generate_key()
+            try:
+                db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)
+                break
+            except sqlite3.IntegrityError:
+                continue
+    
         db.set_user_role(message.from_user.id, "start")  # назначаем роль start новым пользователям
 
     # Получаем роль пользователя
