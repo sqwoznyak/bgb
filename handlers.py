@@ -21,7 +21,7 @@ db = Database('users.db')
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
     if not db.user_exists(message.from_user.id):
-        db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
+        db.add_user(message.from_user.id, message.from_user.username, referal_id=None)
         unique_key = utils.generate_key()
         db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)  
         db.set_admin_priv(message.from_user.username) 
