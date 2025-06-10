@@ -17,47 +17,58 @@ class Database:
         self.connection.close()
 
     def create_tables(self):
+<<<<<<< HEAD
 
+=======
+        
+        # создаём таблицы
+>>>>>>> 9ef5fdc (поправил поле active)
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS `Servers-tabels` (
                 `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
                 `cluster` TEXT NOT NULL,
+<<<<<<< HEAD
                 `server_status` INTEGER NOT NULL CHECK(server_status IN (0, 1)),
+=======
+                `server_status` INTEGER NOT NULL DEFAULT 1 CHECK(server_status IN (0, 1)),
+>>>>>>> 9ef5fdc (поправил поле active)
                 `server_ip` TEXT NOT NULL
             )
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `Servers-tabels` (
-            `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
-            `cluster` TEXT NOT NULL,
-            `server-status` INTEGER NOT NULL CHECK(server-status IN ('0', '1')),
-            `server-ip` TEXT NOT NULL
-        )
+            CREATE TABLE IF NOT EXISTS Client_table (
+                tg_id INTEGER PRIMARY KEY,
+                username TEXT,
+                role TEXT NOT NULL DEFAULT 'start' CHECK(role IN ('user', 'start', 'admin')),
+                referal_id INTEGER,
+                `active` INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0, 1)),
+                created_time INTEGER
+            )
+        ''')
+    
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS `key_table` (
+                `tg_id` INTEGER NOT NULL,
+                `key_name` TEXT NOT NULL,
+                `start_date` INTEGER NOT NULL,
+                `end_date` INTEGER NOT NULL,
+                `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
+                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
+            );
         ''')
 
         self.cursor.execute('''
-        CREATE TABLE `key-table` (
-            `tg_id` INTEGER NOT NULL,
-            `key-name` TEXT NOT NULL,
-            `start-date` INTEGER NOT NULL,
-            `end-date` INTEGER NOT NULL,
-            `key` TEXT PRIMARY KEY NOT NULL UNIQUE,
-            `active` INTEGER NOT NULL CHECK(active IN ('0', '1')),
-            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        );
-        ''')
-
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS `transaction-table` (
-            `tg_id` INTEGER NOT NULL,
-            `description` TEXT NOT NULL,
-            `json_config` TEXT NOT NULL UNIQUE,
-            FOREIGN KEY(`tg_id`) REFERENCES `Client-table`(`tg_id`)
-        )
+            CREATE TABLE IF NOT EXISTS `Transaction_table` (
+                `tg_id` INTEGER NOT NULL,
+                `description` TEXT NOT NULL,
+                `json_config` TEXT NOT NULL UNIQUE,
+                FOREIGN KEY(`tg_id`) REFERENCES `Client_table`(`tg_id`)
+            )
         ''')
         self.connection.commit()
 
+<<<<<<< HEAD
     def add_user(self, tg_id, username, referal_id=0):
         created_time = int(time.time())
         with self.connection:
@@ -65,6 +76,16 @@ class Database:
             INSERT INTO `Client_table` (tg_id, username, referal_id, created_time)
             VALUES (?, ?, ?, ?)
             ''', (tg_id, username, referal_id, created_time))
+=======
+    # Client_table methods
+    def add_user(self, tg_id, username, role="start", referal_id=0):
+        created_time = int(datetime.now().timestamp())
+        with self.connection:
+            self.cursor.execute('''
+            INSERT INTO `Client_table` (tg_id, username, role, referal_id, created_time)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (tg_id, username, role, referal_id, created_time))
+>>>>>>> 9ef5fdc (поправил поле active)
 
     def user_exists(self, tg_id):
         with self.connection:
@@ -108,18 +129,29 @@ class Database:
 
         with self.connection:
             self.cursor.execute('''
+<<<<<<< HEAD
             INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`, `active`)
             VALUES (?, ?, ?, ?, ?, ?)
             ''', (tg_id, key_name, start_date, end_date, key, 1))
+=======
+            INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (tg_id, key_name, start_date, end_date, key))
+>>>>>>> 9ef5fdc (поправил поле active)
 
     def get_user_key(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
+<<<<<<< HEAD
                 "SELECT `key` FROM `key_table` WHERE `tg_id` = ? AND `active` = 1",
+=======
+                "SELECT `key` FROM `key_table` WHERE `tg_id` = ?",
+>>>>>>> 9ef5fdc (поправил поле active)
                 (tg_id,)
             ).fetchone()
             return result[0] if result else None
 
+<<<<<<< HEAD
     def deactivate_key(self, tg_id):
         with self.connection:
             self.cursor.execute(
@@ -127,6 +159,8 @@ class Database:
                 (tg_id,)
             )
 
+=======
+>>>>>>> 9ef5fdc (поправил поле active)
     # Transaction_table methods
     def add_transaction(self, tg_id, description, json_config):
         with self.connection:
@@ -170,6 +204,7 @@ class Database:
     def delete_user(self, tg_id):
         with self.connection:
             self.cursor.execute("DELETE FROM `Client_table` WHERE `tg_id` = ?", (tg_id,))
+<<<<<<< HEAD
 
     # Получение всех активных ключей
     def get_active_keys(self):
@@ -177,6 +212,8 @@ class Database:
             return self.cursor.execute(
                 "SELECT `tg_id`, `key_name`, `key` FROM `key_table` WHERE `active` = 1"
             ).fetchall()    
+=======
+>>>>>>> 9ef5fdc (поправил поле active)
 
     # Обновление роли пользователя
     def update_user_role(self, tg_id, new_role):
@@ -195,23 +232,35 @@ class Database:
     def get_users(self):
         with self.connection:
             return self.cursor.execute(
+<<<<<<< HEAD
                 "SELECT `tg_id`, `role` FROM `Client_table`"
+=======
+                "SELECT `tg_id`, `active` FROM `Client_table`"
+>>>>>>> 9ef5fdc (поправил поле active)
             ).fetchall()
 
     # Получение даты окончания подписки активного ключа
     def get_user_end_sub(self, tg_id):
         with self.connection:
             result = self.cursor.execute(
+<<<<<<< HEAD
                 "SELECT `end_date` FROM `key_table` WHERE `tg_id` = ? AND `active` = 1",
+=======
+                "SELECT `end_date` FROM `key_table` WHERE `tg_id` = ?",
+>>>>>>> 9ef5fdc (поправил поле active)
                 (tg_id,)
             ).fetchone()
             return format_timestamp(result[0]) if result else "У вас нет подписки"
 
-    # Подсчёт пользователей с активными ключами
+    # Подсчёт пользователей
     def get_count_users(self):
         with self.connection:
             result = self.cursor.execute(
+<<<<<<< HEAD
                 "SELECT COUNT(*) FROM `key_table` WHERE `key` IS NOT NULL AND `active` = 1"
+=======
+                "SELECT COUNT(DISTINCT tg_id) FROM key_table WHERE key IS NOT NULL AND key != ''"
+>>>>>>> 9ef5fdc (поправил поле active)
             ).fetchone()
             return result[0]
 
@@ -228,11 +277,8 @@ class Database:
                     duration_days = 365
 
             self.cursor.execute(
-                '''
-                SELECT `key`, `end_date` FROM `key_table`
-                WHERE `tg_id` = ? AND `active` = 1
-                ''',
-                (tg_id,)
+                "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
+                (tg_id, now)
             )
             result = self.cursor.fetchone()
 
@@ -270,15 +316,10 @@ class Database:
 
 
 
-
-    # Деактивация всех просроченных ключей
-    def remove_expired_keys(self):
-        now = int(time.time())
-        with self.connection:
-            self.cursor.execute(
-                "UPDATE `key_table` SET `active` = 0 WHERE `end_date` < ? AND `active` = 1",
-                (now,)
-            )
+            self.cursor.execute('''
+                INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (tg_id, key_name, start_date, end_date, key))
 
     # Назначение администратора по нику
     def set_admin_priv(self, username):
@@ -292,6 +333,15 @@ class Database:
                 print(f"Role 'admin' successfully set for {username}")
         else:
             print(f"Access denied: {username} is not allowed to be an admin.")
+
+
+    def set_active(self, tg_id, active):
+        with self.connection:
+            return self.cursor.execute(
+                "UPDATE `Client_table` SET `active` = ? WHERE `tg_id` = ?",
+                (active, tg_id)
+            )
+
     
 
 
