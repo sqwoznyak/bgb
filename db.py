@@ -40,7 +40,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS Client_table (
                 tg_id INTEGER PRIMARY KEY,
                 username TEXT,
-                role TEXT NOT NULL DEFAULT 'start',
+                role TEXT NOT NULL DEFAULT 'start' CHECK(role IN ('user', 'start', 'admin')),
                 referal_id INTEGER,
                 `active` INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0, 1)),
                 created_time INTEGER
