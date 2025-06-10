@@ -242,7 +242,7 @@ class Database:
                 )
                 print(f"Role 'admin' successfully set for {username}")
         else:
-            print(f"Access denied: {username} is not allowed to be an admin.")
+            print(f"New user: {username}.")
 
 
     def set_active(self, tg_id, active):
