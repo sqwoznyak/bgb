@@ -17,21 +17,15 @@ class Database:
         self.connection.close()
 
     def create_tables(self):
-<<<<<<< HEAD
 
-=======
         
         # создаём таблицы
->>>>>>> 9ef5fdc (поправил поле active)
+
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS `Servers-tabels` (
                 `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
                 `cluster` TEXT NOT NULL,
-<<<<<<< HEAD
-                `server_status` INTEGER NOT NULL CHECK(server_status IN (0, 1)),
-=======
                 `server_status` INTEGER NOT NULL DEFAULT 1 CHECK(server_status IN (0, 1)),
->>>>>>> 9ef5fdc (поправил поле active)
                 `server_ip` TEXT NOT NULL
             )
         ''')
@@ -131,13 +125,6 @@ class Database:
             ).fetchone()
             return result[0] if result else None
 
-    def deactivate_key(self, tg_id):
-        with self.connection:
-            self.cursor.execute(
-                "UPDATE `key_table` SET `active` = 0 WHERE `tg_id` = ?",
-                (tg_id,)
-            )
-
     # Transaction_table methods
     def add_transaction(self, tg_id, description, json_config):
         with self.connection:
@@ -181,13 +168,6 @@ class Database:
     def delete_user(self, tg_id):
         with self.connection:
             self.cursor.execute("DELETE FROM `Client_table` WHERE `tg_id` = ?", (tg_id,))
-
-    # Получение всех активных ключей
-    def get_active_keys(self):
-        with self.connection:
-            return self.cursor.execute(
-                "SELECT `tg_id`, `key_name`, `key` FROM `key_table` WHERE `active` = 1"
-            ).fetchall()    
 
     # Обновление роли пользователя
     def update_user_role(self, tg_id, new_role):
