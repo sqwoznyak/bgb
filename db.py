@@ -13,6 +13,12 @@
 
 import time
 import sqlite3
+from datetime import datetime, timezone
+
+
+# Функция для человеческого вида отметки времени
+def format_timestamp(ts):
+    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 class Database:
     def __init__(self, db_file):
@@ -214,7 +220,7 @@ class Database:
                 "SELECT `end_date` FROM `key_table` WHERE `tg_id` = ? AND `active` = 1",
                 (tg_id,)
             ).fetchone()
-            return result[0] if result else None
+            return format_timestamp(result[0]) if result else "У вас нет подписки"
 
     # Подсчёт пользователей с активными ключами
     def get_count_users(self):
@@ -266,7 +272,6 @@ class Database:
                 print(f"Role 'admin' successfully set for {username}")
         else:
             print(f"Access denied: {username} is not allowed to be an admin.")
-
     
 
 
