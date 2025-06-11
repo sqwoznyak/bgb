@@ -26,18 +26,27 @@ async def cmd_start(message: types.Message):
     # Если пользователь не существует, добавляем его с ролью start
     if not db.user_exists(message.from_user.id):
         db.add_user(message.from_user.id, message.from_user.username, referal_id=None)
-        db.set_admin_priv(message.from_user.username)
+        
         # Генерация уникального ключа
         while True:
             unique_key = utils.generate_key()
             try:
-                db.add_key(message.from_user.id, "Key", unique_key, 0)
+                db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)
                 break
             except sqlite3.IntegrityError:
                 continue
-            
-    status = db.get_user_role(message.from_user.id)
     
+        db.set_user_role(message.from_user.id, "start")  # назначаем роль start новым пользователям
+
+    # Получаем роль пользователя
+    status = db.get_user_role(message.from_user.id)
+
+    # Если роль не установлена или невалидна → принудительно присвоим start
+    if status not in ["start", "user", "admin"]:
+        db.set_user_role(message.from_user.id, "start")
+        status = "start"
+
+    # Показываем соответствующее меню
     match status:
         case "start":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
@@ -87,18 +96,14 @@ async def call_buy_one_month_subscription(call: types.CallbackQuery):
 
 @router.callback_query(F.data == "three_month")
 async def call_buy_one_month_subscription(call: types.CallbackQuery):
-    bill= await run_payment(item_3m)
-    buy_button = payment.create_pay_button(bill.confirmation.confirmation_url, bill.id)
 #    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_3m)
-    await call.message.edit_text(kb.TEXT_BILL_THREE_MONTH, reply_markup=buy_button)
+#    await call.message.edit_text(kb.TEXT_BILL_THREE_MONTH, reply_markup=keyboard)
     pass
 
 @router.callback_query(F.data == "one_year")
 async def call_buy_one_month_subscription(call: types.CallbackQuery):
-    bill= await run_payment(item_1y)
-    buy_button = payment.create_pay_button(bill.confirmation.confirmation_url, bill.id)
-#    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_3m)
-    await call.message.edit_text(kb.TEXT_BILL_ONE_YEAR, reply_markup=buy_button)
+#    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_1y)
+#    await call.message.edit_text(kb.TEXT_BILL_ONE_YEAR, reply_markup=keyboard)
     pass
 
 @router.callback_query(lambda F: F.data and F.data.startswith('buying'))
@@ -132,8 +137,7 @@ async def process_callback(callback_query: types.CallbackQuery):
     # После выхода из цикла отправляем финальное сообщение в зависимости от статуса
     if payment.status == 'succeeded':
         # Добавление в БД и тп и тд
-        db.add_sub(callback_query.message.chat.id, payment.description)
-        db.add_transaction(callback_query.message.chat.id, payment.description, payment.id)
+        db.add_sub(callback_query.message.chat.id, payment.id, payment.description, utils.generate_key(), "000" )
         db.set_admin_priv(callback_query.message.chat.username)
         payment_details = (
             f"✅ **Платежная информация**\n"
@@ -179,8 +183,8 @@ async def call_main_menu(call: types.CallbackQuery):
 
 @router.message(F.text.lower() == "ключ")
 async def buySubscription(message: types.Message):
-    TEXT_GET_KEY = f'``` ssconf://nokizzy.de/connect/{db.get_user_key(message.from_user.id)} ```'
-    await message.answer(TEXT_GET_KEY, parse_mode='Markdown')
+    TEXT_GET_KEY = db.get_user_key(message.from_user.id)
+    await message.answer(TEXT_GET_KEY)
 
 @router.message(F.text.lower() == "статус")
 async def buySubscription(message: types.Message):
