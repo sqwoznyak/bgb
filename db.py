@@ -1,16 +1,3 @@
-###################################################################
-# Проверить здешний бэкэнд
-###################################################################
-# Начать добавлять челиков со старта и навешивать потом атры
-# Те для тех кто потраил фришную версию, спамитть что купи полную
-###################################################################
-# Мб есть смысл скачать какую то sqlstudio
-# ДЛя наглядного смотрения че в табе после наших рук
-##########################################№№№№№####################
-# Брал отсюда 
-# переделал бд под новый дизайн. убрал маты паши
-###################################################################
-
 import time
 import sqlite3
 from datetime import datetime, timezone
@@ -72,14 +59,13 @@ class Database:
         ''')
         self.connection.commit()
 
-    # Client_table methods
-    def add_user(self, tg_id, username, role="start", referal_id=0):
+    def add_user(self, tg_id, username, referal_id=0):
         created_time = int(time.time())
         with self.connection:
             self.cursor.execute('''
-            INSERT INTO `Client_table` (tg_id, username, role, referal_id, created_time)
-            VALUES (?, ?, ?, ?, ?)
-            ''', (tg_id, username, role, referal_id, created_time))
+            INSERT INTO `Client_table` (tg_id, username, referal_id, created_time)
+            VALUES (?, ?, ?, ?)
+            ''', (tg_id, username, referal_id, created_time))
 
     def user_exists(self, tg_id):
         with self.connection:
@@ -230,26 +216,61 @@ class Database:
             ).fetchone()
             return result[0]
 
-    # Добавление подписки с учётом продления
-    def add_sub(self, tg_id, key_name, key, duration_days):
+    def add_sub(self, tg_id, description):
         with self.connection:
             now = int(time.time())
+
+            match description:
+                case '1 месяц':
+                    duration_days = 30
+                case '3 месяца':
+                    duration_days = 90
+                case '12 месяцев':
+                    duration_days = 365
+
             self.cursor.execute(
-                "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
-                (tg_id, now)
+                '''
+                SELECT `key`, `end_date` FROM `key_table`
+                WHERE `tg_id` = ? AND `active` = 1
+                ''',
+                (tg_id,)
             )
             result = self.cursor.fetchone()
-            if result and result[0]:
-                start_date = result[0] + 86400  # на следующий день
+
+            if result:
+                key = result[0]
+                current_end_date = result[1]
+
+                # Продлеваем от max(now, current_end_date)
+                start_point = max(now, current_end_date)
+                new_end_date = start_point + duration_days * 86400
+
+                # Обновляем end_date
+                self.cursor.execute(
+                    '''
+                    UPDATE `key_table`
+                    SET `end_date` = ?
+                    WHERE `tg_id` = ? AND `key` = ? AND `active` = 1
+                    ''',
+                    (new_end_date, tg_id, key)
+                )
+
+                # Обновляем роль, если была 'start' → ставим 'user'
+                self.cursor.execute(
+                    '''
+                    UPDATE `client_table`
+                    SET `role` = 'user'
+                    WHERE `tg_id` = ? AND `role` = 'start'
+                    ''',
+                    (tg_id,)
+                )
+
             else:
-                start_date = now
+                # На случай если по какой-то причине ключа нет
+                print(f'❗ Активный ключ для tg_id={tg_id} не найден.')
 
-            end_date = start_date + duration_days * 86400
 
-            self.cursor.execute('''
-                INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`, `active`)
-                VALUES (?, ?, ?, ?, ?, 1)
-            ''', (tg_id, key_name, start_date, end_date, key))
+
 
     # Деактивация всех просроченных ключей
     def remove_expired_keys(self):
