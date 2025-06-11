@@ -1,18 +1,11 @@
-###################################################################
-# Проверить здешний бэкэнд
-###################################################################
-# Начать добавлять челиков со старта и навешивать потом атры
-# Те для тех кто потраил фришную версию, спамитть что купи полную
-###################################################################
-# Мб есть смысл скачать какую то sqlstudio
-# ДЛя наглядного смотрения че в табе после наших рук
-##########################################№№№№№####################
-# Брал отсюда 
-# переделал бд под новый дизайн. убрал маты паши
-###################################################################
-
+import time
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+
+
+# Функция для человеческого вида отметки времени
+def format_timestamp(ts):
+    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 class Database:
     def __init__(self, db_file):
@@ -24,8 +17,10 @@ class Database:
         self.connection.close()
 
     def create_tables(self):
+
         
         # создаём таблицы
+
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS `Servers-tabels` (
                 `server_id` INTEGER PRIMARY KEY NOT NULL UNIQUE,
@@ -113,8 +108,9 @@ class Database:
         while self.key_exists(key):
             from utils import generate_key
             key = generate_key()
-        start_date = int(datetime.now().timestamp())
-        end_date = int((datetime.now() + timedelta(days=duration_days)).timestamp())
+        start_date = int(time.time())
+        end_date = start_date + duration_days * 86400
+
         with self.connection:
             self.cursor.execute('''
             INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
@@ -200,7 +196,7 @@ class Database:
                 "SELECT `end_date` FROM `key_table` WHERE `tg_id` = ?",
                 (tg_id,)
             ).fetchone()
-            return result[0] if result else None
+            return format_timestamp(result[0]) if result else "У вас нет подписки"
 
     # Подсчёт пользователей
     def get_count_users(self):
@@ -210,21 +206,57 @@ class Database:
             ).fetchone()
             return result[0]
 
-    # Добавление подписки с учётом продления
-    def add_sub(self, tg_id, key_name, key, duration_days):
+    def add_sub(self, tg_id, description):
         with self.connection:
-            now = int(datetime.now().timestamp())
+            now = int(time.time())
+
+            match description:
+                case '1 месяц':
+                    duration_days = 30
+                case '3 месяца':
+                    duration_days = 90
+                case '12 месяцев':
+                    duration_days = 365
+
             self.cursor.execute(
                 "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
                 (tg_id, now)
             )
             result = self.cursor.fetchone()
-            if result and result[0]:
-                start_date = result[0] + 86400  # на следующий день
-            else:
-                start_date = now
 
-            end_date = start_date + duration_days * 86400
+            if result:
+                key = result[0]
+                current_end_date = result[1]
+
+                # Продлеваем от max(now, current_end_date)
+                start_point = max(now, current_end_date)
+                new_end_date = start_point + duration_days * 86400
+
+                # Обновляем end_date
+                self.cursor.execute(
+                    '''
+                    UPDATE `key_table`
+                    SET `end_date` = ?
+                    WHERE `tg_id` = ? AND `key` = ? AND `active` = 1
+                    ''',
+                    (new_end_date, tg_id, key)
+                )
+
+                # Обновляем роль, если была 'start' → ставим 'user'
+                self.cursor.execute(
+                    '''
+                    UPDATE `client_table`
+                    SET `role` = 'user'
+                    WHERE `tg_id` = ? AND `role` = 'start'
+                    ''',
+                    (tg_id,)
+                )
+
+            else:
+                # На случай если по какой-то причине ключа нет
+                print(f'❗ Активный ключ для tg_id={tg_id} не найден.')
+
+
 
             self.cursor.execute('''
                 INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
