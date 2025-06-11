@@ -11,8 +11,8 @@
 # переделал бд под новый дизайн. убрал маты паши
 ###################################################################
 
+import time
 import sqlite3
-from datetime import datetime, timedelta
 
 class Database:
     def __init__(self, db_file):
@@ -68,7 +68,7 @@ class Database:
 
     # Client_table methods
     def add_user(self, tg_id, username, role="start", referal_id=0):
-        created_time = int(datetime.now().timestamp())
+        created_time = int(time.time())
         with self.connection:
             self.cursor.execute('''
             INSERT INTO `Client_table` (tg_id, username, role, referal_id, created_time)
@@ -112,8 +112,9 @@ class Database:
         while self.key_exists(key):
             from utils import generate_key
             key = generate_key()
-        start_date = int(datetime.now().timestamp())
-        end_date = int((datetime.now() + timedelta(days=duration_days)).timestamp())
+        start_date = int(time.time())
+        end_date = start_date + duration_days * 86400
+
         with self.connection:
             self.cursor.execute('''
             INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`, `active`)
@@ -226,7 +227,7 @@ class Database:
     # Добавление подписки с учётом продления
     def add_sub(self, tg_id, key_name, key, duration_days):
         with self.connection:
-            now = int(datetime.now().timestamp())
+            now = int(time.time())
             self.cursor.execute(
                 "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
                 (tg_id, now)
@@ -246,7 +247,7 @@ class Database:
 
     # Деактивация всех просроченных ключей
     def remove_expired_keys(self):
-        now = int(datetime.now().timestamp())
+        now = int(time.time())
         with self.connection:
             self.cursor.execute(
                 "UPDATE `key_table` SET `active` = 0 WHERE `end_date` < ? AND `active` = 1",
