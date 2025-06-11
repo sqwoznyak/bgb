@@ -217,10 +217,12 @@ class Database:
                     duration_days = 90
                 case '12 месяцев':
                     duration_days = 365
-
             self.cursor.execute(
-                "SELECT MAX(`end_date`) FROM `key_table` WHERE `tg_id` = ? AND `end_date` > ?",
-                (tg_id, now)
+                '''
+                SELECT `key`, `end_date` FROM `key_table`
+                WHERE `tg_id` = ?
+                ''',
+                (tg_id,)
             )
             result = self.cursor.fetchone()
 
@@ -237,7 +239,7 @@ class Database:
                     '''
                     UPDATE `key_table`
                     SET `end_date` = ?
-                    WHERE `tg_id` = ? AND `key` = ? AND `active` = 1
+                    WHERE `tg_id` = ? AND `key` = ?
                     ''',
                     (new_end_date, tg_id, key)
                 )
@@ -254,14 +256,7 @@ class Database:
 
             else:
                 # На случай если по какой-то причине ключа нет
-                print(f'❗ Активный ключ для tg_id={tg_id} не найден.')
-
-
-
-            self.cursor.execute('''
-                INSERT INTO `key_table` (tg_id, `key_name`, `start_date`, `end_date`, `key`)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (tg_id, key_name, start_date, end_date, key))
+                print(f'Активный ключ для tg_id={tg_id} не найден.')
 
     # Назначение администратора по нику
     def set_admin_priv(self, username):
