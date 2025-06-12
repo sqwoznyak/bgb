@@ -10,6 +10,7 @@ from payment import run_payment, item_1m, item_1y, item_3m
 from yookassa import Configuration,Payment
 import asyncio
 import payment
+import sqlite3
 import config
 import kb
 import utils
@@ -20,13 +21,23 @@ db = Database('users.db')
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):
+    print("DEBUG: received /start from", message.from_user.id)
+
+    # Если пользователь не существует, добавляем его с ролью start
     if not db.user_exists(message.from_user.id):
-        db.add_user(message.from_user.id, message.from_user.username, referrer_id=None)
-        unique_key = utils.generate_key()
-        db.add_key(message.from_user.id, "Key", unique_key, duration_days=10000)  
-        db.set_admin_priv(message.from_user.username) 
-    
+        db.add_user(message.from_user.id, message.from_user.username, referal_id=None)
+        db.set_admin_priv(message.from_user.username)
+        # Генерация уникального ключа
+        while True:
+            unique_key = utils.generate_key()
+            try:
+                db.add_key(message.from_user.id, "Key", unique_key, 0)
+                break
+            except sqlite3.IntegrityError:
+                continue
+            
     status = db.get_user_role(message.from_user.id)
+    
     match status:
         case "start":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.start_kb,
@@ -34,18 +45,21 @@ async def cmd_start(message: types.Message):
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
+
         case "user":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.user_kb,
                 resize_keyboard=True,
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.TEXT_USER_MAIN, reply_markup=keyboard)
+
         case "admin":
             keyboard = types.ReplyKeyboardMarkup(keyboard=kb.admin_kb,
                 resize_keyboard=True,
                 input_field_placeholder=kb.TEXT_FIELD_PLACEHOLDER
             )
             await message.answer(kb.START_MESSAGE, reply_markup=keyboard)
+
 
 @router.message(F.text.lower() == "главное меню")
 async def handle_main_menu(message: types.Message):
@@ -73,14 +87,18 @@ async def call_buy_one_month_subscription(call: types.CallbackQuery):
 
 @router.callback_query(F.data == "three_month")
 async def call_buy_one_month_subscription(call: types.CallbackQuery):
+    bill= await run_payment(item_3m)
+    buy_button = payment.create_pay_button(bill.confirmation.confirmation_url, bill.id)
 #    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_3m)
-#    await call.message.edit_text(kb.TEXT_BILL_THREE_MONTH, reply_markup=keyboard)
+    await call.message.edit_text(kb.TEXT_BILL_THREE_MONTH, reply_markup=buy_button)
     pass
 
 @router.callback_query(F.data == "one_year")
 async def call_buy_one_month_subscription(call: types.CallbackQuery):
-#    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_1y)
-#    await call.message.edit_text(kb.TEXT_BILL_ONE_YEAR, reply_markup=keyboard)
+    bill= await run_payment(item_1y)
+    buy_button = payment.create_pay_button(bill.confirmation.confirmation_url, bill.id)
+#    keyboard = types.InlineKeyboardMarkup(inline_keyboard=kb.bill_3m)
+    await call.message.edit_text(kb.TEXT_BILL_ONE_YEAR, reply_markup=buy_button)
     pass
 
 @router.callback_query(lambda F: F.data and F.data.startswith('buying'))
@@ -114,7 +132,8 @@ async def process_callback(callback_query: types.CallbackQuery):
     # После выхода из цикла отправляем финальное сообщение в зависимости от статуса
     if payment.status == 'succeeded':
         # Добавление в БД и тп и тд
-        db.add_sub(callback_query.message.chat.id, payment.id, payment.description, utils.generate_key(), "000" )
+        db.add_sub(callback_query.message.chat.id, payment.description)
+        db.add_transaction(callback_query.message.chat.id, payment.description, payment.id)
         db.set_admin_priv(callback_query.message.chat.username)
         payment_details = (
             f"✅ **Платежная информация**\n"
@@ -160,8 +179,8 @@ async def call_main_menu(call: types.CallbackQuery):
 
 @router.message(F.text.lower() == "ключ")
 async def buySubscription(message: types.Message):
-    TEXT_GET_KEY = db.get_user_key(message.from_user.id)
-    await message.answer(TEXT_GET_KEY)
+    TEXT_GET_KEY = f'``` ssconf://nokizzy.de/connect/{db.get_user_key(message.from_user.id)} ```'
+    await message.answer(TEXT_GET_KEY, parse_mode='Markdown')
 
 @router.message(F.text.lower() == "статус")
 async def buySubscription(message: types.Message):
